@@ -1,0 +1,47 @@
+
+services:
+  mariadb:
+    image: mariadb:11.8
+    container_name: msusuarios-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: clase_sabado_persistencia
+      MARIADB_USER: msusuarios
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - msusuarios-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: msusuarios:latest
+    container_name: msusuarios-app
+    restart: unless-stopped
+    ports:
+      - "8181:8181"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/clase_sabado_persistencia
+      SPRING_DATASOURCE_USERNAME: msusuarios
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - msusuarios-network
+
+volumes:
+  mariadb_data:
+
+networks:
+  msusuarios-network:
+    driver: bridge
